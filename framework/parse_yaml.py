@@ -40,9 +40,11 @@ def run_without_database(endpoints_dict:dict):
     routes = []
     for view, specs in endpoints_dict.items():
         url = specs['url']
-        return_text = specs['return']
+        return_text = specs['text']
+
+        json_response = {'text':return_text}
                         
-        routes.append(Route(url, endpoint=lambda x:JSONResponse(return_text))) 
+        routes.append(Route(url, endpoint=lambda x:JSONResponse(json_response))) 
                             
     app = Starlette(routes=routes)     
 
