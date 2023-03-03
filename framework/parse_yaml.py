@@ -14,20 +14,17 @@ from starlette.routing import Route
 
 def create_app_from_config(config:dict)-> Starlette:
 
-    database = config.get('database')
-    endpoints = config.get('endpoints')
+    database_name = config.get('database')
+    models = config.get('models')
+    apis = config.get('apis')
 
-    if database == '/':
-        app = run_without_database(endpoints)
+    database = import_from_models_file(models, database_name)
 
-    else:    
+    app_routes = create_routes_list(apis, database, models)
 
-        models_file = config.get('models')
-        database = import_from_models_file(models=models_file, module=database)
-        app_routes = create_routes_list(endpoints, models_file, database)
 
         
-        app =  Starlette(
+    app =  Starlette(
                 routes=app_routes,
                 on_startup=[database.connect],
                 on_shutdown=[database.disconnect]
@@ -51,23 +48,23 @@ def run_without_database(endpoints_dict:dict):
     return app                   
                             
 
-def create_routes_list(endpoints_dict: dict, models_file:str, database: Database) -> list:
+def create_routes_list(apis, database: Database, models) -> list:
     app_routes = []
 
-    for view, specs in endpoints_dict.items():
-        url = specs['url']
-        method = specs['method']
-        fields = (specs['fields']).split(', ')
-        db_table = specs['table']
-        table = import_from_models_file(models=models_file, module=db_table)
-        endpoint = create_view_function(database, method, table, fields)
+    for api in apis:
+        db_table = apis['table']
+        methods = apis['methods']
 
-        app_routes.append(Route(url, endpoint=endpoint,methods=[method]))
+        url =  '/' + str(db_table)
+        table = import_from_models_file(models=models, module=db_table)
+        endpoint = create_view_function(database, methods, table)
+
+        app_routes.append(Route(url, endpoint=endpoint,methods=[methods]))
 
     return app_routes      
 
 
-def create_view_function(database, method, table, fields) -> callable:
+def create_view_function(database, method, table) -> callable:
 
     async def view_function(request:Request) -> callable:
 
@@ -75,7 +72,7 @@ def create_view_function(database, method, table, fields) -> callable:
 
         results = await get_execute_function(method=method, query=query, database=database)
 
-        return set_response(method=method, results=results, fields=fields)
+        return set_response(method=method, results=results)
 
     return view_function 
 
@@ -97,7 +94,9 @@ def get_execute_function(method: str, query, database: Database):
             return database.execute(query)
 
 
-def set_response(method: str, results, fields: list) -> JSONResponse:
+def set_response(method: str, results) -> JSONResponse:
+
+    fields = ['title', 'url']
 
     match method:
         case 'GET':
