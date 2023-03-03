@@ -32,49 +32,58 @@ def create_app_from_config(config:dict)-> Starlette:
 
     return app    
 
-def run_without_database(endpoints_dict:dict):
+# def run_without_database(endpoints_dict:dict):
 
-    routes = []
-    for view, specs in endpoints_dict.items():
-        url = specs['url']
-        return_text = specs['text']
+#     routes = []
+#     for view, specs in endpoints_dict.items():
+#         url = specs['url']
+#         return_text = specs['text']
 
-        json_response = {'text':return_text}
+#         json_response = {'text':return_text}
                         
-        routes.append(Route(url, endpoint=lambda x:JSONResponse(json_response))) 
+#         routes.append(Route(url, endpoint=lambda x:JSONResponse(json_response))) 
                             
-    app = Starlette(routes=routes)     
+#     app = Starlette(routes=routes)     
 
-    return app                   
+#     return app                   
                             
 
 def create_routes_list(apis, database: Database, models) -> list:
     app_routes = []
 
+
     for api in apis:
         db_table = apis['table']
-        methods = apis['methods']
+        method = apis['methods']
+
+        async def endpoint(request):
+            query = await get_query(request, method, table)
+
+            results = await get_execute_function(method, query, database)
+
+            response = set_response(method, results)
+
+            return response
 
         url =  '/' + str(db_table)
         table = import_from_models_file(models=models, module=db_table)
-        endpoint = create_view_function(database, methods, table)
 
-        app_routes.append(Route(url, endpoint=endpoint,methods=[methods]))
+        app_routes.append(Route(url, endpoint=endpoint,methods=[method]))
 
     return app_routes      
 
 
-def create_view_function(database, method, table) -> callable:
+# def create_view_function(database, method, table) -> callable:
 
-    async def view_function(request:Request) -> callable:
+#     async def view_function(request:Request) -> callable:
 
-        query = await get_query(request, method=method, table=table)
+#         query = await get_query(request, method=method, table=table)
 
-        results = await get_execute_function(method=method, query=query, database=database)
+#         results = await get_execute_function(method=method, query=query, database=database)
 
-        return set_response(method=method, results=results)
+#         return set_response(method=method, results=results)
 
-    return view_function 
+#     return view_function 
 
 
 async def get_query(request: Request, method: str, table):
