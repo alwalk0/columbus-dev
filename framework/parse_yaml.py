@@ -42,31 +42,39 @@ def create_routes_list(apis, database: Database, models) -> list:
         table = import_from_models_file(models=models, module=db_table)
         methods = list(apis['methods'])
 
-        def create_view_function(method, database, table):
-            match method:
-                case 'GET':
-                    return get_request
-                case 'POST':
-                    return post_request
-                case 'PUT':
-                    return put_request
-                case 'DELETE':
-                    return delete_request
-
 
         for method in methods:
             endpoint = create_view_function(method, database, table)
             app_routes.append(Route(url, endpoint=endpoint,methods=[method]))
 
-    return app_routes      
+    return app_routes     
 
 
-async def get_request(request):
+
+
+def create_view_function(method, database, table):
+
+    async def create_function(request):
+        match method:
+            case 'GET':
+                return await get_request(request, database, table)
+            case 'POST':
+                return await post_request(request, database, table)
+            case 'PUT':
+                return await put_request(request, database, table)
+            case 'DELETE':
+                return await delete_request(request, database, table)
+            
+    return create_function        
+
+
+async def get_request(request, database, table):
 
     fields = [column.key for column in table.columns]
 
     if request.query_params:
         query = "SELECT * FROM articles WHERE id = :id"
+        #todo: return if doesnt exist
         result = await database.fetch_one(query=query, values={"id": int(request.query_params['id'])})
         content = {
             field: result[field] for field in fields
@@ -85,22 +93,29 @@ async def get_request(request):
         ]
         response =  JSONResponse(content)
 
+    return response    
 
-async def post_request(request):
+
+async def post_request(request, database, table):
     data = await request.json()
     query = table.insert().values(data)
     await database.execute(query)
     return JSONResponse({'ok': 'ok'})
 
 
-async def put_request(request):
-    query = "UPDATE articles SET (title, url) VALUES (:title, :url) WHERE id = :id"
-    result = await database.execute(query=query, values={"id": int(request.query_params['id'])})
-    return JSONResponse({'ok': 'ok'})
+async def put_request(request, database, table):
+    fields = [column.key for column in table.columns]
+    data = await request.json()
+    #todo: check if exists
+    if request.query_params:
+        query = "UPDATE articles SET title = :title, url = :url WHERE id = :id"
+        result = await database.execute(query=query, values={"id": int(request.query_params['id']), 'title': 'hello'})
+        return JSONResponse({'ok': 'ok'})
 
 
-async def delete_request(request):
-    query = "DELETE * FROM articles WHERE id = :id"
+async def delete_request(request, database, table):
+    #todo: check if exists
+    query = "DELETE FROM articles WHERE id = :id"
     result = await database.execute(query=query, values={"id": int(request.query_params['id'])})
     return JSONResponse({'ok': 'ok'})
 
