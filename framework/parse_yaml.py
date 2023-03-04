@@ -104,11 +104,15 @@ async def post_request(request, database, table):
 
 
 async def put_request(request, database, table):
-    fields = [column.key for column in table.columns]
+    fields = [column.key for column in table.columns if column.key != 'id']
+    fields_string = [f'{field} = :{field}'.format(field) for field in fields]
+    print(fields_string)
     data = await request.json()
     #todo: check if exists
     if request.query_params:
-        query = "UPDATE articles SET title = :title, url = :url WHERE id = :id"
+        query = "UPDATE articles SET {} WHERE id = :id".format(', '.join(fields_string))
+        print(query)
+        
         result = await database.execute(query=query, values={"id": int(request.query_params['id']), 'title': 'hello'})
         return JSONResponse({'ok': 'ok'})
 
