@@ -25,5 +25,5 @@ responses = {
     'GET_all': get_json_objects,
     'PUT': lambda id: f"Successfully updated item with id {id}".format(id),
     'DELETE':  lambda id: f"Successfully deleted item with id {id}".format(id),
-    'POST': lambda id: f"Successfully updated item with id {id}".format(id)
+    'POST': lambda id: "Successfully created item."
 }
