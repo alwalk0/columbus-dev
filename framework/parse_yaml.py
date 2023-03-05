@@ -11,6 +11,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+from .queries import raw_queries
+from .responses import responses
+
 
 def create_app_from_config(config:dict)-> Starlette:
 
@@ -70,28 +73,17 @@ def create_view_function(method, database, table):
 
 async def get_request(request, database, table):
 
-    fields = [column.key for column in table.columns]
-
     if request.query_params:
-        query = "SELECT * FROM articles WHERE id = :id"
+        query = raw_queries['get_one'](table)
         #todo: return if doesnt exist
-        result = await database.fetch_one(query=query, values={"id": int(request.query_params['id'])})
-        content = {
-            field: result[field] for field in fields
-        }          
-        response =  JSONResponse(content)       
+        result = await database.fetch_one(query=query, values={"id": int(request.query_params['id'])})     
+        response =  JSONResponse(responses['GET_one'](table, result))       
 
     else:           
 
         query = table.select()
         results = await database.fetch_all(query)
-        content = [
-        {
-            field: result[field] for field in fields
-        }
-        for result in results
-        ]
-        response =  JSONResponse(content)
+        response =  JSONResponse(responses['GET_all'](table, results))
 
     return response    
 
@@ -100,28 +92,22 @@ async def post_request(request, database, table):
     data = await request.json()
     query = table.insert().values(data)
     await database.execute(query)
-    return JSONResponse({'ok': 'ok'})
+    return JSONResponse(responses['POST'])
 
 
 async def put_request(request, database, table):
-    fields = [column.key for column in table.columns if column.key != 'id']
-    fields_string = [f'{field} = :{field}'.format(field) for field in fields]
-    print(fields_string)
     data = await request.json()
-    #todo: check if exists
     if request.query_params:
-        query = "UPDATE articles SET {} WHERE id = :id".format(', '.join(fields_string))
-        print(query)
-        
+        query = raw_queries['PUT'](table)
         result = await database.execute(query=query, values={"id": int(request.query_params['id']), 'title': 'hello'})
-        return JSONResponse({'ok': 'ok'})
+        return JSONResponse(responses['PUT'])
 
 
 async def delete_request(request, database, table):
-    #todo: check if exists
-    query = "DELETE FROM articles WHERE id = :id"
-    result = await database.execute(query=query, values={"id": int(request.query_params['id'])})
-    return JSONResponse({'ok': 'ok'})
+    if request.query_params:
+        query = raw_queries['DELETE'](table)
+        result = await database.execute(query=query, values={"id": int(request.query_params['id'])})
+        return JSONResponse(responses['DELETE'])
 
 
 
