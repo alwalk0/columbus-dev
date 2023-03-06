@@ -13,13 +13,15 @@ async def get_request(request, database, table):
         query = raw_queries['GET_one'](table)
         pk = int(request.query_params['id'])
         result = await database.fetch_one(query=query, values={"id": pk})     
-        response =  JSONResponse(responses['GET_one'](table, result))       
+        response = responses['GET_one'](table, result)
+        json_response =  JSONResponse(response)       
     else:           
         query = table.select()
         results = await database.fetch_all(query)
-        response =  JSONResponse(responses['GET_all'](table, results))
+        response = responses['GET_all'](table, results)
+        json_response =  JSONResponse(response)
 
-    return response    
+    return json_response    
 
 
 async def post_request(request, database, table):
