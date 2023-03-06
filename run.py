@@ -4,8 +4,8 @@ import typer
 import uvicorn
 import yaml
 import inspect
-from .framework.parse_yaml import create_app_from_config
-
+from .framework.parse_yaml import create_app
+from .framework.parse_yaml import CONFIG_NAME
 
 app = typer.Typer()
 
@@ -13,15 +13,17 @@ app = typer.Typer()
 @app.command()
 def start():
 
+    try:
 
-    MAIN_CONFIG_PATH = 'main.yml'
+        with open(CONFIG_NAME, "r") as file:
+            config_dict = yaml.safe_load(file)
+    
+    except:
+        raise Exception('No config file.')    
 
-    with open(MAIN_CONFIG_PATH, 'r') as file:
-        config = yaml.safe_load(file)
-
-    app = create_app_from_config(config)
-    host = config.get('host')
-    port = config.get('port')
+    host = config_dict['host']
+    port = config_dict['port']
+    app = create_app()
 
 
     uvicorn.run(app, host=str(host), port=port)
