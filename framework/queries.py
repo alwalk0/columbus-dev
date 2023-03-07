@@ -1,4 +1,7 @@
-def create_put_request_query(table):
+from sqlalchemy import Table
+
+
+def create_put_request_query(table: Table) -> str:
     fields = [column.key for column in table.columns if column.key != "id"]
     fields_string = [f"{field} = :{field}".format(field) for field in fields]
     query = "UPDATE articles SET {} WHERE id = :id".format(
