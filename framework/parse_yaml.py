@@ -8,24 +8,14 @@ from starlette.routing import Route
 
 from .queries import raw_queries
 from .responses import responses
-from .utils import import_from_file, import_all_database_tables
-
-CONFIG_NAME = "main.yml"
+from .utils import do_database_setup
 
 
-with open(CONFIG_NAME, "r") as file:
-    config_dict = yaml.safe_load(file)
+
+database, database_tables = do_database_setup()
 
 
-database_name = config_dict["database"]
-models_file = config_dict["models"]
-apis = config_dict["apis"]
-
-database = import_from_file(models_file, database_name)
-database_tables = import_all_database_tables(apis, models_file)
-
-
-def create_app() -> Starlette:
+def create_app(apis) -> Starlette:
     specs_list = apis.values()
 
     routes = list(map(create_routes_list, specs_list))
@@ -41,9 +31,9 @@ def create_app() -> Starlette:
 
 
 def create_routes_list(specs: dict) -> list:
-    url = "/" + str(table_name)
     table_name = specs["table"]
     methods = specs["methods"]
+    url = "/" + str(table_name)
     routes = [
         create_route(method=method, url=url, table_name=table_name)
         for method in methods
@@ -105,9 +95,9 @@ async def post_request(request: Request, table: Table) -> JSONResponse:
 
 async def put_request(request: Request, table: Table) -> JSONResponse:
     data = await request.json()
-    if request.query_params:
+    if request.path_params:
         query = raw_queries["PUT"](table)
-        pk = int(request.query_params["id"])
+        pk = pk = request.path_params["id"]
         values = {"id": pk} | data
         result = await database.execute(query=query, values=values)
         response = responses["PUT"](pk)
@@ -115,9 +105,10 @@ async def put_request(request: Request, table: Table) -> JSONResponse:
 
 
 async def delete_request(request: Request, table: Table) -> JSONResponse:
-    if request.query_params:
+    if request.path_params:
         query = raw_queries["DELETE"](table)
-        pk = int(request.query_params["id"])
+        pk  = request.path_params["id"]
         result = await database.execute(query=query, values={"id": pk})
         response = responses["DELETE"](pk)
         return JSONResponse(response)
+
