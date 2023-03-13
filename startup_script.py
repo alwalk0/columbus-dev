@@ -1,22 +1,35 @@
-import yaml
-import os
 import typer
-
+import os
 
 app = typer.Typer()
+
+MAIN_CONFIG_NAME = "main.yml"
+
+MODELS_NAME = "models.py"
 
 
 @app.command()
 def start():
+    if not os.path.exists(MAIN_CONFIG_NAME):
+        with open(MAIN_CONFIG_NAME, "w") as f:
+            f.write(
+                """\
+host: 0.0.0.0
+port: 8000
+models: models.py
+database:
+apis:
+  hello_world:
+    table:
+    methods: [GET]
+            
+    """
+            )
 
-
-    main_file = {'host': '0.0.0.0', 'port': 8000, 'models': 'models.py', 'database': '/', 'endpoints': {'hello':{'url': '/hello', 'text': 'hello columbus'} }}
-
-    with open('main.yml', 'w') as file:
-        document = yaml.dump(main_file, file, sort_keys=False)
-
-    with open('models.py', 'w') as f:
-        f.write('''\
+    if not os.path.exists(MODELS_NAME):
+        with open(MODELS_NAME, "w") as f:
+            f.write(
+                """\
 import databases
 
 DATABASE_URL = ' '
@@ -24,10 +37,8 @@ DATABASE_URL = ' '
 database = databases.Database(DATABASE_URL)
 
             
-    ''')
-
-
-
+    """
+            )
 
 
 if __name__ == "__main__":

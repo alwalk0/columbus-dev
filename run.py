@@ -1,27 +1,20 @@
-import yaml
 import typer
 import uvicorn
-import yaml
-from .framework.parse_yaml import create_app
-from .framework.parse_yaml import CONFIG_NAME
+from columbus.framework.main import host, port
+
 
 app = typer.Typer()
 
 
 @app.command()
 def start():
-    try:
-        with open(CONFIG_NAME, "r") as file:
-            config_dict = yaml.safe_load(file)
-
-    except:
-        raise Exception("No config file.")
-
-    host = config_dict["host"]
-    port = config_dict["port"]
-    app = create_app()
-
-    uvicorn.run(app, host=str(host), port=port)
+    uvicorn.run(
+        "columbus.framework.main:app",
+        host=str(host),
+        port=port,
+        reload=True,
+        reload_includes="*.yml",
+    )
 
 
 if __name__ == "__main__":

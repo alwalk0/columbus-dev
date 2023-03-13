@@ -3,13 +3,12 @@ from sqlalchemy import Table
 import yaml
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response, PlainTextResponse
 from starlette.routing import Route
 
 from .queries import raw_queries
-from .responses import responses
+from .responses import responses, error_responses
 from .utils import do_database_setup
-
 
 
 database, database_tables = do_database_setup()
@@ -69,46 +68,55 @@ def create_view_function(method: str, table_name: str):
     return create_function
 
 
-async def get_request(request: Request, table: Table) -> JSONResponse:
-    if request.path_params:
-        query = raw_queries["GET_one"](table)
-        pk = request.path_params["id"]
-        result = await database.fetch_one(query=query, values={"id": pk})
-        response = responses["GET_one"](table, result)
-        json_response = JSONResponse(response)
-    else:
-        query = table.select()
-        results = await database.fetch_all(query)
-        response = responses["GET_all"](table, results)
-        json_response = JSONResponse(response)
+async def get_request(request: Request, table: Table) -> Response:
+    try:
+        if request.path_params:
+            query = raw_queries["GET_one"](table)
+            pk = request.path_params["id"]
+            result = await database.fetch_one(query=query, values={"id": pk})
+            response = responses["GET_one"](table, result)
+            json_response = JSONResponse(response)
+        else:
+            query = table.select()
+            results = await database.fetch_all(query)
+            response = responses["GET_all"](table, results)
+            json_response = JSONResponse(response)
 
-    return json_response
-
-
-async def post_request(request: Request, table: Table) -> JSONResponse:
-    data = await request.json()
-    query = table.insert().values(data)
-    result = await database.execute(query)
-    response = responses["POST"](result)
-    return JSONResponse(response)
+        return json_response
+    except Exception as e:
+        return Response(content=error_responses["GET"])
 
 
-async def put_request(request: Request, table: Table) -> JSONResponse:
-    data = await request.json()
-    if request.path_params:
+async def post_request(request: Request, table: Table) -> Response:
+    try:
+        data = await request.json()
+        query = table.insert().values(data)
+        result = await database.execute(query)
+        response = responses["POST"](result)
+        return JSONResponse(response)
+    except Exception as e:
+        return Response(content=error_responses["POST"])
+
+
+async def put_request(request: Request, table: Table) -> Response:
+    try:
+        data = await request.json()
         query = raw_queries["PUT"](table)
         pk = pk = request.path_params["id"]
         values = {"id": pk} | data
         result = await database.execute(query=query, values=values)
         response = responses["PUT"](pk)
         return JSONResponse(response)
+    except Exception as e:
+        return Response(content=error_responses["PUT"])
 
 
-async def delete_request(request: Request, table: Table) -> JSONResponse:
-    if request.path_params:
+async def delete_request(request: Request, table: Table) -> Response:
+    try:
         query = raw_queries["DELETE"](table)
-        pk  = request.path_params["id"]
+        pk = request.path_params["id"]
         result = await database.execute(query=query, values={"id": pk})
         response = responses["DELETE"](pk)
         return JSONResponse(response)
-
+    except Exception as e:
+        return Response(content=error_responses["DELETE"])
