@@ -1,6 +1,6 @@
 import yaml
-from columbus.framework.utils import run_without_database
-from columbus.startup_script import MAIN_CONFIG_NAME
+from columbus.start import MAIN_CONFIG_NAME
+from columbus.framework.application import create_app
 
 try:
     with open(MAIN_CONFIG_NAME, "r") as file:
@@ -13,10 +13,4 @@ except:
 
 host = config_dict["host"]
 port = config_dict["port"]
-
-if config_dict["database"] == None:
-    app = run_without_database()
-
-else:
-    from columbus.framework.application import create_app
-    app = create_app(config_dict["apis"])
+app = create_app(config_dict["apis"])

@@ -1,20 +1,21 @@
 from sqlalchemy import Table
 
-import yaml
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response, PlainTextResponse
+from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from .queries import raw_queries
-from .responses import responses, error_responses
-from .utils import do_database_setup
+from columbus.framework.queries import raw_queries
+from columbus.framework.responses import responses, error_responses
+from columbus.framework.database import do_database_setup, run_without_database
 
 
 database, database_tables = do_database_setup()
 
 
-def create_app(apis) -> Starlette:
+def create_app(apis:dict) -> Starlette:
+    if not database:
+        return run_without_database()
     specs_list = apis.values()
 
     routes = list(map(create_routes_list, specs_list))
@@ -54,7 +55,7 @@ def create_route(method: str, url: str, table_name: str, no_arg=False) -> Route:
 def create_view_function(method: str, table_name: str):
     table = database_tables[table_name]
 
-    async def create_function(request: Request):
+    async def view_function(request: Request):
         match method:
             case "GET":
                 return await get_request(request, table)
@@ -65,7 +66,7 @@ def create_view_function(method: str, table_name: str):
             case "DELETE":
                 return await delete_request(request, table)
 
-    return create_function
+    return view_function
 
 
 async def get_request(request: Request, table: Table) -> Response:
